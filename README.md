@@ -16,6 +16,13 @@ Or in one line, without tapping first:
 brew install --cask scrypt-kitty/tap/parchment
 ```
 
+Parchment is unsigned, and Homebrew does not strip the quarantine attribute, so
+clear it once after installing:
+
+```sh
+xattr -dr com.apple.quarantine /Applications/Parchment.app
+```
+
 ## Why a tap rather than homebrew-cask
 
 The official `homebrew-cask` repository applies

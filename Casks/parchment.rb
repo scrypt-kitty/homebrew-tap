@@ -20,9 +20,18 @@ cask "parchment" do
 
   app "Parchment.app"
 
-  # The builds are unsigned, so Gatekeeper quarantines them. Homebrew removes
-  # the quarantine attribute for casks it installs, which is why `brew install`
-  # avoids the right-click dance the README describes for manual downloads.
+  # The builds are unsigned, and Homebrew does *not* strip the quarantine
+  # attribute — verified on Homebrew 6.0, where the old --no-quarantine flag no
+  # longer exists. A Homebrew install therefore needs the same one-time step as
+  # a manual download, which `caveats` below spells out.
+
+  caveats <<~EOS
+    Parchment is not code-signed, so macOS quarantines it on first launch.
+    Clear the flag once:
+
+      xattr -dr com.apple.quarantine /Applications/Parchment.app
+
+  EOS
 
   zap trash: [
     "~/Library/Application Support/io.parchment.viewer",
