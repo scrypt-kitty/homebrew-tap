@@ -1,0 +1,94 @@
+name: Update casks
+
+# Polls upstream releases and rewrites the cask when a newer version appears.
+#
+# Deliberately a *pull* from this repository rather than a push from the project
+# that publishes the release: a push would need a cross-repository token, and
+# this way the workflow gets by with the tap's own GITHUB_TOKEN, which can only
+# write here.
+
+on:
+  schedule:
+    - cron: "0 8 * * *"
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  parchment:
+    name: parchment
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+
+      - name: Check for a newer release
+        id: check
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          set -euo pipefail
+
+          current=$(grep -m1 '^  version "' Casks/parchment.rb | cut -d'"' -f2)
+          latest=$(gh release view --repo scrypt-kitty/parchment \
+            --json tagName --jq '.tagName' | sed 's/^v//')
+
+          echo "current=$current  latest=$latest"
+          if [ "$current" = "$latest" ]; then
+            echo "changed=false" >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+
+          # Checksums come from the release's own SHA256SUMS rather than being
+          # recomputed here, so the cask pins exactly what the release
+          # published.
+          gh release download "v$latest" --repo scrypt-kitty/parchment \
+            --pattern SHA256SUMS --dir /tmp --clobber
+          arm=$(awk -v f="Parchment_${latest}_aarch64.dmg" '$2 == f {print $1}' /tmp/SHA256SUMS)
+          intel=$(awk -v f="Parchment_${latest}_x64.dmg" '$2 == f {print $1}' /tmp/SHA256SUMS)
+
+          if [ -z "$arm" ] || [ -z "$intel" ]; then
+            echo "::error::SHA256SUMS is missing one of the DMG entries for $latest"
+            exit 1
+          fi
+
+          echo "latest=$latest" >> "$GITHUB_OUTPUT"
+          echo "arm=$arm" >> "$GITHUB_OUTPUT"
+          echo "intel=$intel" >> "$GITHUB_OUTPUT"
+          echo "changed=true" >> "$GITHUB_OUTPUT"
+
+      - name: Rewrite the cask
+        if: steps.check.outputs.changed == 'true'
+        env:
+          LATEST: ${{ steps.check.outputs.latest }}
+          ARM: ${{ steps.check.outputs.arm }}
+          INTEL: ${{ steps.check.outputs.intel }}
+        run: |
+          set -euo pipefail
+          python3 - <<'PY'
+          import os
+          import re
+          import pathlib
+
+          path = pathlib.Path("Casks/parchment.rb")
+          text = path.read_text()
+          text = re.sub(r'^  version ".*"$', f'  version "{os.environ["LATEST"]}"',
+                        text, count=1, flags=re.M)
+          text = re.sub(r'^  sha256 arm:   ".*",$',
+                        f'  sha256 arm:   "{os.environ["ARM"]}",',
+                        text, count=1, flags=re.M)
+          text = re.sub(r'^         intel: ".*"$',
+                        f'         intel: "{os.environ["INTEL"]}"',
+                        text, count=1, flags=re.M)
+          path.write_text(text)
+          PY
+          git diff --stat
+
+      - name: Commit
+        if: steps.check.outputs.changed == 'true'
+        run: |
+          set -euo pipefail
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git commit -am "Update parchment to ${{ steps.check.outputs.latest }}"
+          git push
