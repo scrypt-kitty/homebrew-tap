@@ -1,7 +1,7 @@
 cask "parchment" do
   arch arm: "aarch64", intel: "x64"
 
-  version "1.1.0"
+  version "1.0.0"
   sha256 arm:   "91a92c8aeda99ce3b041b33d0131d20f43db5c8fa78a54076f417d9b379f820d",
          intel: "ca6bf3585a40edba555595313e3a8931a7f1f2e6a2929d73800b17b5b3222feb"
 
