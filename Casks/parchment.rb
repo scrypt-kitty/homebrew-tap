@@ -1,9 +1,9 @@
 cask "parchment" do
   arch arm: "aarch64", intel: "x64"
 
-  version "1.1.0"
-  sha256 arm:   "91a92c8aeda99ce3b041b33d0131d20f43db5c8fa78a54076f417d9b379f820d",
-         intel: "ca6bf3585a40edba555595313e3a8931a7f1f2e6a2929d73800b17b5b3222feb"
+  version "1.2.0"
+  sha256 arm:   "c6e48724d2c61dbd7c93b2ee49d60430553dcaec05d65b59443aa88d3db42aa1",
+         intel: "e76158ea1ea428dac877d4afade2d9d4097e2587beb361380c806876bfc21da1"
 
   url "https://github.com/scrypt-kitty/parchment/releases/download/v#{version}/Parchment_#{version}_#{arch}.dmg",
       verified: "github.com/scrypt-kitty/parchment/"
